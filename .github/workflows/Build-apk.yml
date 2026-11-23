@@ -42,10 +42,10 @@ jobs:
 
           if [ -f "./gradlew" ]; then
             chmod +x ./gradlew
-            ./gradlew assembleDebug
+            ./gradlew assembleDebug --stacktrace
           elif [ -f "./app/gradlew" ]; then
             chmod +x ./app/gradlew
-            (cd app && ./gradlew assembleDebug)
+            (cd app && ./gradlew assembleDebug --stacktrace)
           else
             echo "Gradle wrapper (gradlew) bulunamadı!"
             exit 1
