@@ -1,0 +1,32 @@
+{
+  "server": {
+    "host": "GlokMC.aternos.me",
+    "port": 54356
+  },
+  "announcement": "",
+  "discord": "",
+  "discordClientId": "",
+  "news": [
+    {
+      "t": "GlokMC’ye Hoş Geldin!",
+      "p": "Survival, arkadaşlar ve macera seni bekliyor."
+    },
+    {
+      "t": "Yeni Duyuru",
+      "p": "Buraya duyuru metnini yaz."
+    },
+    {
+      "t": "Etkinlik",
+      "p": "Buraya etkinlik bilgisini yaz."
+    }
+  ],
+  "rules": [
+    "Kural 1: buraya sunucu kurallarını yaz",
+    "Kural 2: ..."
+  ],
+  "clientMod": {
+    "minecraft": "26.2",
+    "version": "",
+    "url": ""
+  }
+}
