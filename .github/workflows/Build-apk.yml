@@ -21,11 +21,17 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
 
-      - run: bash rebrand.sh PojavLauncher assets/icon.png
+      - name: Rebrand to GlokMC
+        run: bash rebrand.sh PojavLauncher assets/icon.png
 
-      - run: cd PojavLauncher && chmod +x gradlew && ./gradlew :app_pojavlauncher:assembleDebug
+      - name: Build APK
+        run: |
+          cd PojavLauncher
+          chmod +x gradlew
+          ./gradlew :app_pojavlauncher:assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
