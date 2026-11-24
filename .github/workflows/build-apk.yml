@@ -1,0 +1,46 @@
+name: GlokMC Mobile APK
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Checkout PojavLauncher
+        uses: actions/checkout@v4
+        with:
+          repository: PojavLauncherTeam/PojavLauncher
+          ref: v3_openjdk
+          path: PojavLauncher
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Rebrand to GlokMC
+        run: bash rebrand.sh PojavLauncher assets/icon.png
+
+      - name: Build Debug APK
+        run: |
+          cd PojavLauncher
+          chmod +x gradlew
+          ./gradlew :app_pojavlauncher:assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: GlokMC-APK
+          path: PojavLauncher/app_pojavlauncher/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
