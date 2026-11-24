@@ -4,49 +4,63 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: |
-            8
-            11
-            21
-            17
-      - name: PojavLauncher indir
-        run: |
-          git clone --depth 1 --recurse-submodules --shallow-submodules -b v3_openjdk https://github.com/PojavLauncherTeam/PojavLauncher.git PojavLauncher
-          ls PojavLauncher
-      - name: GlokMC markasi
+          java-version: 17
+      - name: Resmi APK ve araclari indir
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick
-          RES=PojavLauncher/app_pojavlauncher/src/main/res
-          for f in $RES/values*/strings.xml; do
+          mkdir -p work && cd work
+          gh release download --repo iBotPeaches/Apktool --pattern 'apktool_*.jar' --output apktool.jar
+          gh release download --repo PojavLauncherTeam/PojavLauncher --pattern '*.apk' --dir dl
+          ls -la dl
+          APK=$(ls -S dl/*arm64* 2>/dev/null | head -1 || true)
+          [ -n "$APK" ] || APK=$(ls -S dl/*.apk | head -1)
+          cp "$APK" original.apk
+          ls -la original.apk
+      - name: GlokMC markasi
+        working-directory: work
+        run: |
+          java -jar apktool.jar d -s -f original.apk -o out
+          for f in out/res/values*/strings.xml; do
             if [ -f "$f" ]; then
               sed -i 's|<string name="app_name">[^<]*</string>|<string name="app_name">GlokMC</string>|' "$f"
             fi
           done
-          ICON=icon.png
-          [ -f "$ICON" ] || ICON=assets/icon.png
+          ICON=../icon.png
+          [ -f "$ICON" ] || ICON=../assets/icon.png
           if [ -f "$ICON" ]; then
-            for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-              dir=$RES/mipmap-${d%%:*}; sz=${d##*:}
-              mkdir -p "$dir"
-              convert "$ICON" -resize ${sz}x${sz} "$dir/ic_launcher.png"
-              cp "$dir/ic_launcher.png" "$dir/ic_launcher_round.png"
+            for REF in $(grep -o 'android:\(icon\|roundIcon\)="@[a-z]*/[a-zA-Z0-9_]*"' out/AndroidManifest.xml | sort -u); do
+              TYPE=$(echo "$REF" | sed 's|.*="@\([a-z]*\)/.*|\1|')
+              NAME=$(echo "$REF" | sed 's|.*/\([a-zA-Z0-9_]*\)"|\1|')
+              echo "Simge degistiriliyor: $TYPE/$NAME"
+              find out/res -path "*/$TYPE*" -name "$NAME.*" -delete
+              for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+                dir="out/res/$TYPE-${d%%:*}"; sz="${d##*:}"
+                mkdir -p "$dir"
+                convert "$ICON" -resize ${sz}x${sz} "$dir/$NAME.png"
+              done
             done
-            rm -f $RES/mipmap-anydpi*/ic_launcher*.xml
           else
             echo "icon.png yok, simge atlandi"
           fi
-      - name: APK derle
-        working-directory: PojavLauncher
+      - name: Derle ve imzala
+        working-directory: work
         run: |
-          chmod +x gradlew
-          ./gradlew :app_pojavlauncher:assembleDebug --stacktrace -Porg.gradle.java.installations.fromEnv=JAVA_HOME_8_X64,JAVA_HOME_11_X64,JAVA_HOME_17_X64,JAVA_HOME_21_X64
+          java -jar apktool.jar b out -o unsigned.apk
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          $BT/zipalign -p -f 4 unsigned.apk aligned.apk
+          keytool -genkeypair -keystore glokmc.jks -storepass glokmc123 -keypass glokmc123 -alias glokmc -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=GlokMC"
+          $BT/apksigner sign --ks glokmc.jks --ks-pass pass:glokmc123 --key-pass pass:glokmc123 --out GlokMC.apk aligned.apk
+          $BT/apksigner verify GlokMC.apk
+          ls -la GlokMC.apk
       - uses: actions/upload-artifact@v4
         with:
           name: GlokMC-APK
-          path: PojavLauncher/app_pojavlauncher/build/outputs/apk/debug/*.apk
+          path: work/GlokMC.apk
